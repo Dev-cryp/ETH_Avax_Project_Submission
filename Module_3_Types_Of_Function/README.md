@@ -27,14 +27,24 @@ contract Cust_ERC20 is ERC20 {
         _mint(msg.sender, 1000000 * 10 ** decimals());
     }
 
- 
-    function mint(address to, uint256 amount) public {
-        _mint(to, amount);
+    function mint(uint256 amount) public {
+        _mint(msg.sender, amount);
     }
 
-   
     function burn(uint256 amount) public {
         _burn(msg.sender, amount);
+    }
+
+    // Define Custom transfer function
+
+    function customTransfer(address to, uint256 amount) public returns (bool) {
+        
+        require(to != address(0), "Transfer to the zero address is not allowed");
+        require(balanceOf(msg.sender) >= amount, "Insufficient balance");
+
+        _transfer(msg.sender, to, amount);
+
+        return true;
     }
 }
 ```
