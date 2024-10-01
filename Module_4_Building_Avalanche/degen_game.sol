@@ -1,29 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.10;
 
-contract DegenGaming {
+// Import OpenZeppelin Libraries
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-    // State Variable 
 
+contract DegenGaming is ERC20 {
+
+    // State Variables
+    string private _name = "Degen Gaming";
+    string private _symbol = "Degen";
+    uint8 private _decimals = 10;
     address public owner;
-    string public name = "Degen Gaming";
-    string public symbol = "Degen";
-    uint8 public decimals = 10;
-    uint256 public totalSupply = 0;
 
-    // Mapping
-
+    // Mapping for Store Items
     mapping(uint256 => string) public ItemName;
     mapping(uint256 => uint256) public Itemprice;
-    mapping(address => uint256) public balance;
     mapping(address => mapping(uint256 => bool)) public redeemedItems;
     mapping(address => uint256) public redeemedItemCount;
 
-    // Use 'Constructor' to initialize values
+    // Events for Redeeming Items
+    event Redeem(address indexed user, string itemName);
 
-    constructor() {
+    // Constructor to Initialize ERC20 and Sample Items in Store
+    constructor() ERC20(_name, _symbol) {
         owner = msg.sender;
-
         // Initialize some sample items in the store
         GameStore(0, "Bag", 500);
         GameStore(1, "Tablet", 1000);
@@ -31,71 +32,34 @@ contract DegenGaming {
         GameStore(3, "Monkey NFT", 25000);
     }
 
-    // Modifier to Control Access
-
     modifier onlyOwner() {
-        require(msg.sender == owner, "This function can only be used by the owner.");
+        require(msg.sender == owner, "Only Owner Can Execute!");
         _;
     }
 
-    // Taking Record of Transactions
+    // Mint Tokens (Only Owner)
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
+    }
 
-    event Mint(address indexed to, uint256 value);
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Burn(address indexed from, uint256 value);
-    event Redeem(address indexed user, string itemName);
+    // Burn Tokens (Anyone Can Burn Their Own Tokens)
+    function burn(uint256 amount) public {
+        _burn(msg.sender, amount);
+    }
 
-    
-    // Store Function 
-
-    function GameStore(uint256 itemId, string memory _itemName, uint256 _itemPrice) public onlyOwner {
+    // Store Function to Set Item Name and Price
+    function GameStore(uint256 itemId, string memory _itemName, uint256 _itemPrice) public {
         ItemName[itemId] = _itemName;
         Itemprice[itemId] = _itemPrice;
     }
 
-    // Mint Functions
-
-    function mint(address to, uint256 amount) external onlyOwner {
-        totalSupply += amount;
-        balance[to] += amount;
-        emit Mint(to, amount);
-        emit Transfer(address(0), to, amount);
-    }
-    
-    // Get Balance
-
-    function balanceOf(address accountAddress) external view returns (uint256) {
-        return balance[accountAddress];
-    }
-
-    // Transfer Token
-
-    function transfer(address receiver, uint256 amount) external returns (bool) {
-        require(balance[msg.sender] >= amount, "Insufficient balance.");
-        balance[msg.sender] -= amount;
-        balance[receiver] += amount;
-        emit Transfer(msg.sender, receiver, amount);
-        return true;
-    }
-
-    // Burn Function 
-
-    function burn(uint256 amount) external {
-        require(amount <= balance[msg.sender], "Insufficient balance.");
-        balance[msg.sender] -= amount;
-        totalSupply -= amount;
-        emit Burn(msg.sender, amount);
-        emit Transfer(msg.sender, address(0), amount);
-    }
-
-    // Redeem Item from store
-
+    // Redeem Item from Store
     function Itemredeem(uint256 accId) external returns (string memory) {
         require(Itemprice[accId] > 0, "Invalid item ID.");
         uint256 redemptionAmount = Itemprice[accId];
-        require(balance[msg.sender] >= redemptionAmount, "Insufficient balance to redeem the item.");
+        require(balanceOf(msg.sender) >= redemptionAmount, "Insufficient balance to redeem the item.");
 
-        balance[msg.sender] -= redemptionAmount;
+        _burn(msg.sender, redemptionAmount);
         redeemedItems[msg.sender][accId] = true;
         redeemedItemCount[msg.sender]++;
         emit Redeem(msg.sender, ItemName[accId]);
@@ -103,8 +67,7 @@ contract DegenGaming {
         return ItemName[accId];
     }
 
-    // Get Redeemed Item Information
-
+    // Get Redeemed Item Count
     function getRedeemedItemCount(address user) external view returns (uint256) {
         return redeemedItemCount[user];
     }
